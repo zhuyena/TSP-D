@@ -6,12 +6,10 @@ from Myproblem import MyProblem
 
 # 实例文件路径
 from GA import GA
-
+# test
 file_path = '../TSP-D-Instances-master/uniform/uniform-73-n50.txt'
 problemName = 'uniform-55-n10'
-# ---------------
-# 选定问题实例后调用一次lkh算法即可
-# -------------
+
 # 存储结果路径填
 out_path = '../output_results'
 repeat = 0  # 遗传算法运行次数

@@ -537,8 +537,11 @@ class Population:
             drone_sorties = []
             f_value = 0
             for cut in range(cut_num):
+                # 将染色体表示的tsp路径分为10个节点一段
                 sub = pop[i][(cut*10):((cut+1)*10+1)]
+                # 每个子路径求解
                 [[sub_tour], sub_value, sub_solution] = self.idv.assign_drone(sub, self.dismatrix, self.alpha, self.kappa)
+                # 如果是第一个路径
                 f_value = f_value + sub_value
                 if truck_tour == []:
                     truck_tour = sub_solution[0][0]

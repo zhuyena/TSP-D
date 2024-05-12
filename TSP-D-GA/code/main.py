@@ -7,8 +7,8 @@ from Myproblem import MyProblem
 # 实例文件路径
 from GA import GA
 # test
-file_path = '../TSP-D-Instances-master/uniform/uniform-51-n10.txt'
-problemName = 'uniform-55-n10'
+file_path = '../TSP-D-Instances-master/uniform/uniform-65-n20.txt'
+problemName = 'uniform-61-n20.txt'
 
 # 存储结果路径填
 out_path = '../output_results'

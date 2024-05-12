@@ -529,26 +529,108 @@ class Population:
         f_pop_value = final_pop_value
         complete_solution = []
         F_value = []
-        # l = len(pop)
         for i in range(len(pop)):
             l = len(pop[i])
             cut_num = (l-1) // 10
             truck_tour = []
             drone_sorties = []
             f_value = 0
+            start_sortie = []
+            start_truck = []
+            start_value = 0
+            end_sortie = []
+            end_truck = []
+            end_value = 0
+            combine = []
+            combine_value_origin = 0
             for cut in range(cut_num):
                 # 将染色体表示的tsp路径分为10个节点一段
                 sub = pop[i][(cut*10):((cut+1)*10+1)]
                 # 每个子路径求解
                 [[sub_tour], sub_value, sub_solution] = self.idv.assign_drone(sub, self.dismatrix, self.alpha, self.kappa)
                 # 如果是第一个路径
-                f_value = f_value + sub_value
-                if truck_tour == []:
-                    truck_tour = sub_solution[0][0]
-                else:
-                    truck_tour = truck_tour[:-1] + sub_solution[0][0]
+                if cut == 0:
+                    t1 = 0
+                    t2 = 0
+                    end_sortie = sub_solution[0][1][len(sub_solution[0][1])-1]
+                    t1 = (self.dismatrix[end_sortie[0]][end_sortie[1]] + self.dismatrix[end_sortie[1]][end_sortie[2]]) / self.alpha
+                    index = sub_solution[0][0].index(end_sortie[0])
+                    end_truck = sub_solution[0][0][index:]
+                    for node in range(len(end_truck)-1):
+                        t2 = t2 + self.dismatrix[end_truck[node]][end_truck[node+1]]
+                    end_value = max(t1,t2)
 
-                drone_sorties = drone_sorties + sub_solution[0][1]
+                    f_value = f_value + sub_value
+                    truck_tour = sub_solution[0][0]
+                    drone_sorties = drone_sorties + sub_solution[0][1]
+
+                # 如果是最后一个路径
+                if cut == cut_num-1 and cut_num != 1:
+                    t1 = 0
+                    t2 = 0
+                    start_sortie = sub_solution[0][1][0]
+                    t1 = (self.dismatrix[start_sortie[0]][start_sortie[1]] + self.dismatrix[start_sortie[1]][
+                        start_sortie[2]]) / self.alpha
+                    index = sub_solution[0][0].index(start_sortie[2])
+                    start_truck = sub_solution[0][0][0:index + 1]
+                    for node in range(len(start_truck) - 1):
+                        t2 = t2 + self.dismatrix[start_truck[node]][start_truck[node + 1]]
+                    start_value = max(t1, t2)
+
+                    combine = pop[i][(pop[i].index(end_sortie[0])):(pop[i].index(start_sortie[2]) + 1)]
+                    combine_value_origin = start_value + end_value
+                    [[combine_tour], combine_value, combine_solution] = self.idv.assign_drone(combine, self.dismatrix,
+                                                                                              self.alpha, self.kappa)
+                    # 比较修改过后的value值,如果比原来的小，则用修改后的方案代替原来的
+                    if combine_value < combine_value_origin:
+                        f_value = f_value + (sub_value - (combine_value_origin - combine_value))
+                        # 卡车路径
+                        truck_tour = truck_tour[:truck_tour.index(end_sortie[0])] + combine_solution[0][0] + sub_solution[0][0][(sub_solution[0][0].index(start_sortie[2]) + 1):]
+                        # truck_tour = truck_tour[:-1] + sub_solution[0][0]
+
+                        drone_sorties = drone_sorties[:-1] + combine_solution[0][1] + sub_solution[0][1][1:]
+
+                    else:
+                        f_value = f_value + sub_value
+                        truck_tour = sub_solution[0][0]
+                        drone_sorties = drone_sorties + sub_solution[0][1]
+
+                # 其他情况
+                if cut > 0 and cut < cut_num-1:
+                    t1 = 0
+                    t2 = 0
+                    start_sortie = sub_solution[0][1][0]
+                    t1 = (self.dismatrix[start_sortie[0]][start_sortie[1]] + self.dismatrix[start_sortie[1]][start_sortie[2]]) / self.alpha
+                    index = sub_solution[0][0].index(start_sortie[2])
+                    start_truck = sub_solution[0][0][0:index+1]
+                    for node in range(len(start_truck)-1):
+                        t2 = t2 + self.dismatrix[start_truck[node]][start_truck[node+1]]
+                    start_value = max(t1,t2)
+
+                    combine = pop[i][(pop[i].index(end_sortie[0])):(pop[i].index(start_sortie[2])+1)]
+                    combine_value_origin = start_value + end_value
+                    [[combine_tour], combine_value, combine_solution] = self.idv.assign_drone(combine, self.dismatrix, self.alpha, self.kappa)
+                    # 比较修改过后的value值,如果比原来的小，则用修改后的方案代替原来的
+                    if combine_value < combine_value_origin:
+                        f_value = f_value + (sub_value - (combine_value_origin - combine_value))
+                        # 卡车路径
+                        truck_tour = truck_tour[:truck_tour.index(end_sortie[0])] + combine_solution[0][0] + sub_solution[0][0][(sub_solution[0][0].index(start_sortie[2]) + 1):]
+                        # truck_tour = truck_tour[:-1] + sub_solution[0][0]
+
+                        drone_sorties = drone_sorties - drone_sorties[-1] + combine_solution[0][1] + sub_solution[0][1][1:]
+                        # drone_sorties = drone_sorties + sub_solution[0][1]
+                    else:
+                        f_value = f_value + sub_value
+                        truck_tour = sub_solution[0][0]
+                        drone_sorties = drone_sorties + sub_solution[0][1]
+
+                    end_sortie = sub_solution[0][1][len(sub_solution[0][1]) - 1]
+                    t1 = (self.dismatrix[end_sortie[0]][end_sortie[1]] + self.dismatrix[end_sortie[1]][end_sortie[2]]) / self.alpha
+                    index = sub_solution[0][0].index(end_sortie[0])
+                    end_truck = sub_solution[0][0][index:]
+                    for node in range(len(end_truck) - 1):
+                        t2 = t2 + self.dismatrix[end_truck[node]][end_truck[node + 1]]
+                    end_value = max(t1, t2)
 
             if len(final_pop) < self.popsize:
                 if self.is_value_in_list(f_value, f_pop_value):  # 存在相同的适应度值
@@ -570,22 +652,6 @@ class Population:
                         bisect.insort(f_pop_value, f_value)  # 将元素插入到从小到大排列的数组中
                         index = f_pop_value.index(f_value)
                         f_pop.insert(index, pop[i])
-
-            # 切分染色体，变为小规模，以20为例，在第十个点进行切分
-            # sub1 = pop[i][:11]
-            # sub2 = pop[i][10:]
-            # [[sub1_tour], sub1_value, sub1_solution] = self.idv.assign_drone(sub1, self.dismatrix, self.alpha, self.kappa)
-            # [[sub2_tour], sub2_value, sub2_solution] = self.idv.assign_drone(sub2, self.dismatrix, self.alpha, self.kappa)
-            # idvi = sub1[:-1] + sub2
-            # f_value = sub1_value + sub2_value
-            # truck_tour = sub1_solution[0][0][:-1] + sub2_solution[0][0]
-            # drone_sorties = sub1_solution[0][1] + sub2_solution[0][1]
-
-            # [[idvi], f_value , complete_solution] = self.idv.assign_drone(pop[i], self.dismatrix, self.alpha, self.kappa)  # 分配卡车与无人机路径
-            # 重新分配一次，评价次数就加1
-            # f_value = self.evaluate(idvi)
-            # [final_idv, finalf_value] = self.idv.optimize(idvi, f_value, self.dismatrix, self.alpha, self.kappa)  # 优化无人机分配方案（允许合并架次）
-
 
         return [f_pop, f_pop_value]
 

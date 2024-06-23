@@ -61,11 +61,11 @@ class Population:
 
         idv_num = 0  # 生成的个体数
         while idv_num < self.popsize or len(Pop[0]) < self.popsize:  # 子代需要达到种群大小
-            [parent_a, a_value] = self.binary_tournament(Pop)  # 二进制锦标赛
+            [parent_a, a_value, a_solution] = self.binary_tournament(Pop)  # 二进制锦标赛
             if random.random() < self.crossover_rate:  # 若选择的染色体达到交叉概率，则利用二进制锦标赛选择另一个染色体与之进行交叉
-                [parent_b, b_value] = self.binary_tournament(Pop)
+                [parent_b, b_value, b_solution] = self.binary_tournament(Pop)
                 # 卡车与无人机的顺序交叉，交叉产生两个子代
-                Pop = self.crossover(parent_a, parent_b, Pop[0], Pop[1])
+                Pop = self.crossover(parent_a, parent_b, Pop[0], Pop[1], Pop[2])
                 idv_num += 2
 
             else:  # 若该染色体没到交叉概率，则保留
@@ -77,7 +77,7 @@ class Population:
                     children.append(p)  # 把第一层的染色体进行分配
                     # 第二层染色体的卡车无人机通过分配来决定
 
-                    Pop = self.assigned(children, Pop[0], Pop[1])
+                    Pop = self.assigned(children, Pop[0], Pop[1], Pop[2])
 
                     idv_num += 1
         return Pop
@@ -88,16 +88,18 @@ class Population:
         random_number1 = random.randint(0, len(population[0])-1)  # 生成一个随机数
         parent_a = population[0][random_number1]  # 随机选择的染色体
         a_value = population[1][random_number1]  # 该染色体的value值
+        a_solution = population[2][random_number1]  # 该染色体对应的具体分配方案
         # 定位到该染色体的下标
         random_number2 = random.randint(0, len(population[0])-1)  # 生成一个随机数
         parent_b = population[0][random_number2]  # 随机选择的染色体
         b_value = population[1][random_number2]  # 该染色体的value值
+        b_solution = population[2][random_number2]
 
         # parent_b = random.choice(population[0])、
         if a_value < b_value:
-            return [parent_a, a_value]
+            return [parent_a, a_value, a_solution]
         else:
-            return [parent_b,b_value]
+            return [parent_b, b_value, b_solution]
         # return self.distance_comparision(parent_a, parent_b)  # 比较总距离，选择距离少的
 
     # def distance_comparision(self, parent_a, parent_b):
@@ -170,7 +172,7 @@ class Population:
 
         return total_distance
 
-    def crossover(self, parent_a, parent_b, final_pop, final_pop_value):
+    def crossover(self, parent_a, parent_b, final_pop, final_pop_value, final_pop_solution):
         a = copy.deepcopy(parent_a)  # parent_a的big tour
         a = a[1:-1]
         b = copy.deepcopy(parent_b)  # parent_b的big tour
@@ -200,11 +202,11 @@ class Population:
         children2.append(0)
 
         # 第二层染色体的卡车无人机通过分配来决定
-        [final_pop, final_pop_value]= self.assigned([children1], final_pop, final_pop_value)  # 交叉后的第一层染色体进行分配
+        [final_pop, final_pop_value, final_pop_solution] = self.assigned([children1], final_pop, final_pop_value, final_pop_solution)  # 交叉后的第一层染色体进行分配
 
-        [final_pop, final_pop_value] = self.assigned([children2] , final_pop, final_pop_value)
+        [final_pop, final_pop_value, final_pop_solution] = self.assigned([children2], final_pop, final_pop_value, final_pop_solution)
 
-        return [final_pop, final_pop_value]
+        return [final_pop, final_pop_value, final_pop_solution]
 
     # 一点交叉
     def crossover1(self, parent_a, parent_b):
@@ -524,14 +526,21 @@ class Population:
 
         return child_cut
 
-    def assigned(self, pop, final_pop, final_pop_value):
+    def assigned(self, pop, final_pop, final_pop_value, final_pop_solution):
         f_pop = final_pop
         f_pop_value = final_pop_value
+        # 存放无人机与卡车分配方案
+        f_pop_solution = final_pop_solution
         complete_solution = []
         F_value = []
         for i in range(len(pop)):
             l = len(pop[i])
-            cut_num = (l-1) // 10
+            a = (l - 1) % 10
+            if a == 0:
+                cut_num = (l - 1) // 10
+            if a > 0:
+                cut_num = ((l - 1) // 10) + 1
+            # a = (l-1) % 10
             truck_tour = []
             drone_sorties = []
             f_value = 0
@@ -545,7 +554,21 @@ class Population:
             combine_value_origin = 0
             for cut in range(cut_num):
                 # 将染色体表示的tsp路径分为10个节点一段
-                sub = pop[i][(cut*10):((cut+1)*10+1)]
+                if a == 0:
+                    sub = pop[i][(cut * 10):((cut + 1) * 10 + 1)]
+                if 0 < a < 3:
+                    if cut == cut_num-1:
+                        break
+                    if cut == cut_num-2:
+                        sub = pop[i][(cut * 10):]
+                    else:
+                        sub = pop[i][(cut * 10):((cut + 1) * 10 + 1)]
+                if a >= 3:
+                    if cut == cut_num-1:
+                        sub = pop[i][(cut * 10):]
+                    else:
+                        sub = pop[i][(cut * 10):((cut + 1) * 10 + 1)]
+
                 # 每个子路径求解
                 [[sub_tour], sub_value, sub_solution] = self.idv.assign_drone(sub, self.dismatrix, self.alpha, self.kappa)
                 # 如果是第一个路径
@@ -577,7 +600,11 @@ class Population:
                         t2 = t2 + self.dismatrix[start_truck[node]][start_truck[node + 1]]
                     start_value = max(t1, t2)
 
-                    combine = pop[i][(pop[i].index(end_sortie[0])):(pop[i].index(start_sortie[2]) + 1)]
+                    # 以下是优化部分------
+                    if start_sortie[2] == 0:
+                        combine = pop[i][(pop[i].index(end_sortie[0])):]
+                    else:
+                        combine = pop[i][(pop[i].index(end_sortie[0])):(pop[i].index(start_sortie[2]) + 1)]
                     combine_value_origin = start_value + end_value
                     [[combine_tour], combine_value, combine_solution] = self.idv.assign_drone(combine, self.dismatrix,
                                                                                               self.alpha, self.kappa)
@@ -585,15 +612,22 @@ class Population:
                     if combine_value < combine_value_origin:
                         f_value = f_value + (sub_value - (combine_value_origin - combine_value))
                         # 卡车路径
-                        truck_tour = truck_tour[:truck_tour.index(end_sortie[0])] + combine_solution[0][0] + sub_solution[0][0][(sub_solution[0][0].index(start_sortie[2]) + 1):]
-                        # truck_tour = truck_tour[:-1] + sub_solution[0][0]
+                        if start_sortie[2] == 0:
+                            truck_tour = truck_tour[:truck_tour.index(end_sortie[0])] + combine_solution[0][0]
+                        else:
+                            truck_tour = truck_tour[:truck_tour.index(end_sortie[0])] + combine_solution[0][0] + sub_solution[0][0][(sub_solution[0][0].index(start_sortie[2]) + 1):]
 
                         drone_sorties = drone_sorties[:-1] + combine_solution[0][1] + sub_solution[0][1][1:]
 
                     else:
                         f_value = f_value + sub_value
-                        truck_tour = sub_solution[0][0]
+                        truck_tour = truck_tour[:-1] + sub_solution[0][0]
                         drone_sorties = drone_sorties + sub_solution[0][1]
+                    # 优化部分至此---------
+                    # 若要优化，则注释下面三行
+                    # f_value = f_value + sub_value
+                    # truck_tour = truck_tour[:-1] + sub_solution[0][0]
+                    # drone_sorties = drone_sorties + sub_solution[0][1]
 
                 # 其他情况
                 if cut > 0 and cut < cut_num-1:
@@ -607,30 +641,52 @@ class Population:
                         t2 = t2 + self.dismatrix[start_truck[node]][start_truck[node+1]]
                     start_value = max(t1,t2)
 
-                    combine = pop[i][(pop[i].index(end_sortie[0])):(pop[i].index(start_sortie[2])+1)]
+                    # 以下是优化部分------
+                    if start_sortie[2] == 0:
+                        combine = pop[i][(pop[i].index(end_sortie[0])):]
+                    else:
+                        combine = pop[i][(pop[i].index(end_sortie[0])):(pop[i].index(start_sortie[2]) + 1)]
+
+                    # combine = pop[i][(pop[i].index(end_sortie[0])):(pop[i].index(start_sortie[2])+1)]
                     combine_value_origin = start_value + end_value
                     [[combine_tour], combine_value, combine_solution] = self.idv.assign_drone(combine, self.dismatrix, self.alpha, self.kappa)
                     # 比较修改过后的value值,如果比原来的小，则用修改后的方案代替原来的
                     if combine_value < combine_value_origin:
                         f_value = f_value + (sub_value - (combine_value_origin - combine_value))
                         # 卡车路径
-                        truck_tour = truck_tour[:truck_tour.index(end_sortie[0])] + combine_solution[0][0] + sub_solution[0][0][(sub_solution[0][0].index(start_sortie[2]) + 1):]
-                        # truck_tour = truck_tour[:-1] + sub_solution[0][0]
+                        if start_sortie[2] == 0:
+                            truck_tour = truck_tour[:truck_tour.index(end_sortie[0])] + combine_solution[0][0]
+                        else:
+                            truck_tour = truck_tour[:truck_tour.index(end_sortie[0])] + combine_solution[0][0] + sub_solution[0][0][(sub_solution[0][0].index(start_sortie[2]) + 1):]
 
-                        drone_sorties = drone_sorties - drone_sorties[-1] + combine_solution[0][1] + sub_solution[0][1][1:]
+                        drone_sorties = drone_sorties[:-1] + combine_solution[0][1] + sub_solution[0][1][1:]
                         # drone_sorties = drone_sorties + sub_solution[0][1]
                     else:
                         f_value = f_value + sub_value
-                        truck_tour = sub_solution[0][0]
+                        truck_tour = truck_tour[:-1] + sub_solution[0][0]
                         drone_sorties = drone_sorties + sub_solution[0][1]
+                    # 优化部分至此---------
+                    # 若要优化，则注释下面三行
+                    # f_value = f_value + sub_value
+                    # truck_tour = truck_tour[:-1] + sub_solution[0][0]
+                    # drone_sorties = drone_sorties + sub_solution[0][1]
 
-                    end_sortie = sub_solution[0][1][len(sub_solution[0][1]) - 1]
+                    end_sortie = drone_sorties[len(drone_sorties) - 1]
+                    # end_sortie = sub_solution[0][1][len(sub_solution[0][1]) - 1]
                     t1 = (self.dismatrix[end_sortie[0]][end_sortie[1]] + self.dismatrix[end_sortie[1]][end_sortie[2]]) / self.alpha
-                    index = sub_solution[0][0].index(end_sortie[0])
-                    end_truck = sub_solution[0][0][index:]
+                    index = truck_tour.index(end_sortie[0])
+                    # index = sub_solution[0][0].index(end_sortie[0])
+                    end_truck = truck_tour[index:]
+                    # end_truck = sub_solution[0][0][index:]
+                    t2 = 0
                     for node in range(len(end_truck) - 1):
                         t2 = t2 + self.dismatrix[end_truck[node]][end_truck[node + 1]]
                     end_value = max(t1, t2)
+
+            # 表示solution
+            solution = []
+            solution.append(truck_tour)
+            solution.append(drone_sorties)
 
             if len(final_pop) < self.popsize:
                 if self.is_value_in_list(f_value, f_pop_value):  # 存在相同的适应度值
@@ -639,6 +695,7 @@ class Population:
                     bisect.insort(f_pop_value, f_value)  # 将元素插入到从小到大排列的数组中
                     index = f_pop_value.index(f_value)
                     f_pop.insert(index, pop[i])
+                    f_pop_solution.insert(index, solution)
 
             if len(final_pop) == self.popsize:
                 if self.is_value_in_list(f_value, f_pop_value):  # 存在相同的适应度值
@@ -649,11 +706,13 @@ class Population:
                     else:
                         f_pop_value = f_pop_value[:-1]  # 使用切片删除数组的最后一个元素
                         f_pop = f_pop[:-1]
+                        f_pop_solution = f_pop_solution[:-1]
                         bisect.insort(f_pop_value, f_value)  # 将元素插入到从小到大排列的数组中
                         index = f_pop_value.index(f_value)
                         f_pop.insert(index, pop[i])
+                        f_pop_solution.insert(index, solution)
 
-        return [f_pop, f_pop_value]
+        return [f_pop, f_pop_value, f_pop_solution]
 
     def is_value_in_list(self,value, valuelist):
         return value in valuelist

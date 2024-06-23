@@ -1,28 +1,58 @@
-NAME : city031.398837.tour
-COMMENT : Length = 398837
-COMMENT : Found by LKH [Keld Helsgaun] Sun May 12 19:54:03 2024
+NAME : city031.608223.tour
+COMMENT : Length = 608223
+COMMENT : Found by LKH [Keld Helsgaun] Sun Jun 23 19:44:10 2024
 TYPE : TOUR
-DIMENSION : 20
+DIMENSION : 50
 TOUR_SECTION
 1
-8
-19
-11
-2
-16
-14
-10
-5
-13
-7
-3
+32
+35
+28
 15
-12
-4
-9
+23
+33
+26
+41
+25
+24
+34
+13
+16
+5
 18
-20
+4
+11
+19
+44
+37
+40
+38
+9
 6
+48
+14
+29
+8
+22
+7
+20
+21
+45
+2
+3
+46
+43
+27
+31
+49
 17
+36
+42
+39
+10
+12
+47
+30
+50
 -1
 EOF

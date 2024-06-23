@@ -1,5 +1,6 @@
 import copy
 import time
+from bisect import bisect
 from cmath import inf
 import random
 import numpy as np
@@ -26,18 +27,22 @@ class GA:
         # 存放最优解
         self.final_pop = []
         self.final_pop_value = []
+        self.final_pop_solution = []
         # self.kappa = MyProblem.kappa  # 飞行耐力
         # self.operations = ['2opt', 'relocate', 'drone_launch_swap', 'drone_rdv_swap', 'launch_rdv_swap', 'id_random', 'id_greedy']  # 局部搜索算子
         self.operations = ['swap2', '3opt', 'relocate', 'swap', '2opt']
-        self.reward = [25]*len(self.operations)  # 考究初始值为多少合适？
-        self.prop = self.reward / np.sum(self.reward)  # 各个算子初始化的选择概率
-        self.use_times = [0]*len(self.operations)
+        self.reward = [0]*len(self.operations)  # 考究初始值为多少合适？
+        self.prop = [1/len(self.operations)]*len(self.operations)  # 各个算子初始化的选择概率
+        self.use_times = [0]*len(self.operations)  # 算子使用次数
         self.fitnessvalue = []
+        self.epsilon = 0.8  # 探索概率
+        self.decline = 0.9
 
     def run(self):
         # evaluate_count = 0  # 计算评价次数
         self.Pop = self.populations.creat_pop(self.popsize)  # 生成一个都由卡车服务的种群
-        self.assign_pop= self.populations.assigned(self.Pop, self.final_pop, self.final_pop_value)
+        self.assign_pop = self.populations.assigned(self.Pop, self.final_pop, self.final_pop_value, self.final_pop_solution)
+
         current_pop = self.assign_pop
 
         gen = 0
@@ -55,7 +60,7 @@ class GA:
             self.fitnessvalue.append(self.assign_pop[1][0])
 
         self.low_cost = self.assign_pop[1][0]
-        self.best_solution = self.assign_pop[0][0]
+        self.best_solution = self.assign_pop[2][0]
 
     def localsearch(self, pop, gen):
 
@@ -146,43 +151,45 @@ class GA:
         return [new_pop, new_value]
 
     def localsearch2(self, pop, gen):
-
         operations = self.operations
         pop_to_ls = copy.deepcopy(pop)
-        # 设置一个初始的reward列表
-        reward = self.reward
-        # 各个算子初始化的选择概率
-        prop = self.prop
-        use_times = self.use_times
-
-        new_pop = []
-        new_value = []
+        assigned_route = []
+        assigned_value = []
+        complete_solution = []
 
         for idvi in range(50):
             p = np.random.random()  # 随机生成一个概率
-            # p = 0.9
             sum_prop = 0
             for j in range(len(operations)):
-                sum_prop += prop[j]
+                sum_prop += self.prop[j]
                 if p <= sum_prop:
-                    operator = operations[j]
-
+                    operator = operations[j]  # 选择当前概率对应的算子
                     idv_copy = copy.deepcopy(pop_to_ls[0])
                     idv_value_copy = copy.deepcopy(pop_to_ls[1])
+                    idv_solution_copy = copy.deepcopy(pop_to_ls[2])
                     # 局部搜索
-                    [new_pop, new_value, count] = self.problem.neighborhoods1(idv_copy, idv_value_copy, idvi, operator)  # 返回新的种群和优化的染色体数
-                    reward[j] += count
-                    use_times[j] += 1
+                    origin_value = idv_value_copy[idvi]  # 在运用算子之前的value值
+                    new_solution = self.problem.neighborhoods1(idv_copy, idvi, operator)  # 返回新的种群和优化的染色体数
+
+                    [assigned_route, assigned_value, complete_solution] = self.populations.assigned(new_solution, idv_copy, idv_value_copy, idv_solution_copy)
+
+                    if assigned_value[idvi] < origin_value:  # 是否优化了结果
+                        self.reward = [element * self.decline for element in self.reward]
+                        self.reward[j] = self.reward[j] + (origin_value - assigned_value[idvi])  # 衰减后将优化的距离作为奖励值
+                        self.prop = [self.epsilon/len(self.operations)] * len(self.operations)  # 将其余的算子概率设置成ε/k
+                        self.prop[j] = 1 - self.epsilon + (self.epsilon/len(self.operations))  # 将当前算子概率设置为1-ε+ε/k
+
+                    self.use_times[j] += 1
                     break
 
                 else:
-                    j += 1
+                    pass
 
-            self.reward = reward
-            self.prop = self.reward / np.sum(self.reward)
-            self.use_times = use_times
+            # self.reward = reward
+            # 每个个体用完局部搜索算子就更新
+            # self.prop = self.reward / np.sum(self.reward)
 
-        return [new_pop, new_value]
+        return [assigned_route, assigned_value, complete_solution]
 
     def plot_map(self):
         x_values = [self.problem.location[i][0] for i in range(len(self.problem.location))]
@@ -207,9 +214,9 @@ class GA:
             text_list_total.append(str(a))
 
 
-        [[idvi], f_value, complete_solution] = self.idv.assign_drone(self.best_solution, self.problem.dismatrix, self.problem.alpha,
-                                                                     self.problem.kappa)  # 分配卡车与无人机路径
-        for v in complete_solution[0][0]:
+        # [[idvi], f_value, complete_solution] = self.idv.assign_drone(self.best_solution, self.problem.dismatrix, self.problem.alpha,
+        #                                                              self.problem.kappa)  # 分配卡车与无人机路径
+        for v in self.best_solution[0]:
             x.append(city[v][0])
             y.append(city[v][1])
             text_list.append(str(v))
@@ -221,7 +228,7 @@ class GA:
 
         plt.plot(x, y, 'c-', linewidth=2, markersize=12)
         #  无人机架次
-        for s in complete_solution[0][1]:
+        for s in self.best_solution[1]:
             x1 = []
             y1 = []
             for s1 in s:

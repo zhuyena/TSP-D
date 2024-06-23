@@ -10,6 +10,7 @@ from Individual import Individual
 from tools import read_data, nearest_neighbor
 from LKH import lkh
 
+
 class MyProblem:
     def __init__(self, file_path):
         # file = read_data(file_path)
@@ -17,7 +18,7 @@ class MyProblem:
         self.location = location  # 节点坐标
         self.dismatrix = disMatrix  # 距离矩阵
         self.node_num = len(self.location)  # 节点数量
-        self.Iter = 250  # 迭代次数
+        self.Iter = 500  # 迭代次数
         self.alpha = 2  # 无人机速度/卡车速度
         self.kappa = 500  # 无人机耐力范围
         self.drone_num = 1  # 无人机数量
@@ -71,27 +72,29 @@ class MyProblem:
 
         return [solution_current, value_current, count]
 
-    def neighborhoods1(self, pop, value, idvi, operator):
+    def neighborhoods1(self, pop, idvi, operator):
 
         if operator == '2opt':
-            [solution_current, value_current, count] = self.n_2opt1(pop, value, idvi)
+            # [solution_current, value_current, count] = self.n_2opt1(pop, value, idvi)
+            [solution_current] = self.n_2opt1(pop, idvi)
 
         elif operator == 'swap':
-            [solution_current, value_current, count] = self.n_swap1(pop, value, idvi)
+            [solution_current] = self.n_swap1(pop, idvi)
 
         elif operator == 'relocate':
-            [solution_current, value_current, count] = self.n_relocate1(pop, value, idvi)
+            [solution_current] = self.n_relocate1(pop, idvi)
 
         elif operator == '3opt':
-            [solution_current, value_current, count] = self.n_3opt1(pop, value, idvi)
+            # [solution_current, value_current, count] = self.n_3opt1(pop, value, solution, idvi)
+            [solution_current] = self.n_3opt1(pop, idvi)
 
         elif operator == 'swap2':
-            [solution_current, value_current, count] = self.n_swap2_1(pop, value, idvi)
+            [solution_current] = self.n_swap2_1(pop, idvi)
 
         else:
             print('wrong operations')
 
-        return [solution_current, value_current, count]
+        return [solution_current]
 
     def n_2opt(self, pop, value):
         count = 0  # 用来记录有多少个解方案在局部搜索后得到了优化
@@ -161,7 +164,7 @@ class MyProblem:
 
         return [pop, value, count]
 
-    def n_2opt1(self, pop, value, idvi):
+    def n_2opt1(self, pop, idvi):
         count = 0  # 用来记录有多少个解方案在局部搜索后得到了优化
         dismatrix = self.dismatrix
 
@@ -187,44 +190,43 @@ class MyProblem:
         min_index = temp_distance.index(min(temp_distance))  # 2-opt后距离减少最多的
         fin_route = temp_route[min_index]
         # 根据2_opt结果来重新分配
-        [[assigned_route], assigned_value, complete_solution] = self.idv.assign_drone(fin_route, self.dismatrix,
-                                                                                      self.alpha, self.kappa)
+        # [[assigned_route], assigned_value, complete_solution] = self.idv.assign_drone(fin_route, self.dismatrix,
+        #                                                                               self.alpha, self.kappa)
+        #
+        # # 对比结果是否变好，如果结果更优，则保留
+        # # 原来的结果更好，则需要对比是不是比最后一个结果好
+        # if value[idvi] < assigned_value:
+        #     # 与最后一个对比
+        #     if value[-1] < assigned_value:
+        #         pass
+        #     else:
+        #         if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
+        #             pass
+        #         else:  # 添加
+        #             value = value[:-1]  # 使用切片删除数组的最后一个元素
+        #             pop = pop[:-1]
+        #             bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
+        #             index = value.index(assigned_value)
+        #             pop.insert(index, assigned_route)
+        #
+        # if value[idvi] == assigned_value:
+        #     pass
+        #
+        # # 局部搜索后的结果更好
+        # if value[idvi] > assigned_value:
+        #     # count计数+1
+        #     count += 1
+        #     # 判断种群中是否有一样的
+        #     if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
+        #         pass
+        #     else:  # 添加
+        #         value = value[:-1]  # 使用切片删除数组的最后一个元素
+        #         pop = pop[:-1]
+        #         bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
+        #         index = value.index(assigned_value)
+        #         pop.insert(index, assigned_route)
 
-        # 对比结果是否变好，如果结果更优，则保留
-        # 原来的结果更好，则需要对比是不是比最后一个结果好
-        if value[idvi] < assigned_value:
-            # 与最后一个对比
-            if value[-1] < assigned_value:
-                pass
-            else:
-                if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
-                    pass
-                else:  # 添加
-                    value = value[:-1]  # 使用切片删除数组的最后一个元素
-                    pop = pop[:-1]
-                    bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
-                    index = value.index(assigned_value)
-                    pop.insert(index, assigned_route)
-
-        if value[idvi] == assigned_value:
-            pass
-
-        # 局部搜索后的结果更好
-        if value[idvi] > assigned_value:
-            # count计数+1
-            count += 1
-            # 判断种群中是否有一样的
-            if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
-                pass
-            else:  # 添加
-                value = value[:-1]  # 使用切片删除数组的最后一个元素
-                pop = pop[:-1]
-                bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
-                index = value.index(assigned_value)
-                pop.insert(index, assigned_route)
-
-
-        return [pop, value, count]
+        return [fin_route]
 
     def n_3opt(self, pop, value):
         count = 0  # 用来记录有多少个解方案在局部搜索后得到了优化
@@ -295,7 +297,7 @@ class MyProblem:
                 break
         return [pop, value, count]
 
-    def n_3opt1(self, pop, value, idvi):
+    def n_3opt1(self, pop, idvi):
         count = 0  # 用来记录有多少个解方案在局部搜索后得到了优化
         dismatrix = self.dismatrix
 
@@ -322,43 +324,8 @@ class MyProblem:
 
         min_index = temp_distance.index(min(temp_distance))  # 2-opt后距离减少最多的
         fin_route = temp_route[min_index]
-        # 根据2_opt结果来重新分配
-        [[assigned_route], assigned_value, complete_solution] = self.idv.assign_drone(fin_route, self.dismatrix,
-                                                                                      self.alpha, self.kappa)
 
-        # 对比结果是否变好，如果结果更优，则保留
-        # 原来的结果更好，则需要对比是不是比最后一个结果好
-        if value[idvi] < assigned_value:
-            # 与最后一个对比
-            if value[-1] < assigned_value:
-                pass
-            else:
-                if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
-                    pass
-                else:  # 添加
-                    value = value[:-1]  # 使用切片删除数组的最后一个元素
-                    pop = pop[:-1]
-                    bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
-                    index = value.index(assigned_value)
-                    pop.insert(index, assigned_route)
-
-        if value[idvi] == assigned_value:
-            pass
-
-        # 局部搜索后的结果更好
-        if value[idvi] > assigned_value:
-            # count计数+1
-            count += 1
-            # 判断种群中是否有一样的
-            if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
-                pass
-            else:  # 添加
-                value = value[:-1]  # 使用切片删除数组的最后一个元素
-                pop = pop[:-1]
-                bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
-                index = value.index(assigned_value)
-                pop.insert(index, assigned_route)
-        return [pop, value, count]
+        return [fin_route]
 
     def n_swap2(self, pop, value):
         count = 0  # 用来记录有多少个解方案在局部搜索后得到了优化
@@ -392,48 +359,48 @@ class MyProblem:
 
             min_index = temp_distance.index(min(temp_distance))  # 2-opt后距离减少最多的
             fin_route = temp_route[min_index]
-            # 根据2_opt结果来重新分配
-            [[assigned_route], assigned_value, complete_solution] = self.idv.assign_drone(fin_route, self.dismatrix, self.alpha, self.kappa)
+            # # 根据2_opt结果来重新分配
+            # [[assigned_route], assigned_value, complete_solution] = self.idv.assign_drone(fin_route, self.dismatrix, self.alpha, self.kappa)
+            #
+            # # 对比结果是否变好，如果结果更优，则保留
+            # # 原来的结果更好，则需要对比是不是比最后一个结果好
+            # if value[idx] < assigned_value:
+            #     # 与最后一个对比
+            #     if value[-1] < assigned_value:
+            #         pass
+            #     else:
+            #         if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
+            #             pass
+            #         else:  # 添加
+            #             value = value[:-1]  # 使用切片删除数组的最后一个元素
+            #             pop = pop[:-1]
+            #             bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
+            #             index = value.index(assigned_value)
+            #             pop.insert(index, assigned_route)
+            #
+            # if value[idx] == assigned_value:
+            #     pass
+            #
+            # # 局部搜索后的结果更好
+            # if value[idx] > assigned_value:
+            #     # count计数+1
+            #     count += 1
+            #     # 判断种群中是否有一样的
+            #     if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
+            #         pass
+            #     else:  # 添加
+            #         value = value[:-1]  # 使用切片删除数组的最后一个元素
+            #         pop = pop[:-1]
+            #         bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
+            #         index = value.index(assigned_value)
+            #         pop.insert(index, assigned_route)
+            #
+            # idx += 1
+            # if idx >= 50:
+            #     break
+        return [fin_route]
 
-            # 对比结果是否变好，如果结果更优，则保留
-            # 原来的结果更好，则需要对比是不是比最后一个结果好
-            if value[idx] < assigned_value:
-                # 与最后一个对比
-                if value[-1] < assigned_value:
-                    pass
-                else:
-                    if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
-                        pass
-                    else:  # 添加
-                        value = value[:-1]  # 使用切片删除数组的最后一个元素
-                        pop = pop[:-1]
-                        bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
-                        index = value.index(assigned_value)
-                        pop.insert(index, assigned_route)
-
-            if value[idx] == assigned_value:
-                pass
-
-            # 局部搜索后的结果更好
-            if value[idx] > assigned_value:
-                # count计数+1
-                count += 1
-                # 判断种群中是否有一样的
-                if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
-                    pass
-                else:  # 添加
-                    value = value[:-1]  # 使用切片删除数组的最后一个元素
-                    pop = pop[:-1]
-                    bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
-                    index = value.index(assigned_value)
-                    pop.insert(index, assigned_route)
-
-            idx += 1
-            if idx >= 50:
-                break
-        return [pop, value, count]
-
-    def n_swap2_1(self, pop, value, idvi):
+    def n_swap2_1(self, pop, idvi):
         count = 0  # 用来记录有多少个解方案在局部搜索后得到了优化
         dismatrix = self.dismatrix
 
@@ -465,43 +432,43 @@ class MyProblem:
         min_index = temp_distance.index(min(temp_distance))  # 2-opt后距离减少最多的
         fin_route = temp_route[min_index]
         # 根据2_opt结果来重新分配
-        [[assigned_route], assigned_value, complete_solution] = self.idv.assign_drone(fin_route, self.dismatrix,
-                                                                                      self.alpha, self.kappa)
+        # [[assigned_route], assigned_value, complete_solution] = self.idv.assign_drone(fin_route, self.dismatrix,
+        #                                                                               self.alpha, self.kappa)
+        #
+        # # 对比结果是否变好，如果结果更优，则保留
+        # # 原来的结果更好，则需要对比是不是比最后一个结果好
+        # if value[idvi] < assigned_value:
+        #     # 与最后一个对比
+        #     if value[-1] < assigned_value:
+        #         pass
+        #     else:
+        #         if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
+        #             pass
+        #         else:  # 添加
+        #             value = value[:-1]  # 使用切片删除数组的最后一个元素
+        #             pop = pop[:-1]
+        #             bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
+        #             index = value.index(assigned_value)
+        #             pop.insert(index, assigned_route)
+        #
+        # if value[idvi] == assigned_value:
+        #     pass
+        #
+        # # 局部搜索后的结果更好
+        # if value[idvi] > assigned_value:
+        #     # count计数+1
+        #     count += 1
+        #     # 判断种群中是否有一样的
+        #     if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
+        #         pass
+        #     else:  # 添加
+        #         value = value[:-1]  # 使用切片删除数组的最后一个元素
+        #         pop = pop[:-1]
+        #         bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
+        #         index = value.index(assigned_value)
+        #         pop.insert(index, assigned_route)
 
-        # 对比结果是否变好，如果结果更优，则保留
-        # 原来的结果更好，则需要对比是不是比最后一个结果好
-        if value[idvi] < assigned_value:
-            # 与最后一个对比
-            if value[-1] < assigned_value:
-                pass
-            else:
-                if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
-                    pass
-                else:  # 添加
-                    value = value[:-1]  # 使用切片删除数组的最后一个元素
-                    pop = pop[:-1]
-                    bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
-                    index = value.index(assigned_value)
-                    pop.insert(index, assigned_route)
-
-        if value[idvi] == assigned_value:
-            pass
-
-        # 局部搜索后的结果更好
-        if value[idvi] > assigned_value:
-            # count计数+1
-            count += 1
-            # 判断种群中是否有一样的
-            if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
-                pass
-            else:  # 添加
-                value = value[:-1]  # 使用切片删除数组的最后一个元素
-                pop = pop[:-1]
-                bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
-                index = value.index(assigned_value)
-                pop.insert(index, assigned_route)
-
-        return [pop, value, count]
+        return [fin_route]
 
     def n_relocate(self, pop, value):
         count = 0  # 用来记录有多少个解方案在局部搜索后得到了优化
@@ -572,7 +539,7 @@ class MyProblem:
                 break
         return [pop, value, count]
 
-    def n_relocate1(self, pop, value, idvi):
+    def n_relocate1(self, pop, idvi):
         count = 0  # 用来记录有多少个解方案在局部搜索后得到了优化
         dismatrix = self.dismatrix
 
@@ -600,42 +567,42 @@ class MyProblem:
         min_index = temp_distance.index(min(temp_distance))  # 2-opt后距离减少最多的
         fin_route = temp_route[min_index]
         # 根据2_opt结果来重新分配
-        [[assigned_route], assigned_value, complete_solution] = self.idv.assign_drone(fin_route, self.dismatrix,
-                                                                                      self.alpha, self.kappa)
-
-        # 对比结果是否变好，如果结果更优，则保留
-        # 原来的结果更好，则需要对比是不是比最后一个结果好
-        if value[idvi] < assigned_value:
-            # 与最后一个对比
-            if value[-1] < assigned_value:
-                pass
-            else:
-                if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
-                    pass
-                else:  # 添加
-                    value = value[:-1]  # 使用切片删除数组的最后一个元素
-                    pop = pop[:-1]
-                    bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
-                    index = value.index(assigned_value)
-                    pop.insert(index, assigned_route)
-
-        if value[idvi] == assigned_value:
-            pass
-
-        # 局部搜索后的结果更好
-        if value[idvi] > assigned_value:
-            # count计数+1
-            count += 1
-            # 判断种群中是否有一样的
-            if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
-                pass
-            else:  # 添加
-                value = value[:-1]  # 使用切片删除数组的最后一个元素
-                pop = pop[:-1]
-                bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
-                index = value.index(assigned_value)
-                pop.insert(index, assigned_route)
-        return [pop, value, count]
+        # [[assigned_route], assigned_value, complete_solution] = self.idv.assign_drone(fin_route, self.dismatrix,
+        #                                                                               self.alpha, self.kappa)
+        #
+        # # 对比结果是否变好，如果结果更优，则保留
+        # # 原来的结果更好，则需要对比是不是比最后一个结果好
+        # if value[idvi] < assigned_value:
+        #     # 与最后一个对比
+        #     if value[-1] < assigned_value:
+        #         pass
+        #     else:
+        #         if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
+        #             pass
+        #         else:  # 添加
+        #             value = value[:-1]  # 使用切片删除数组的最后一个元素
+        #             pop = pop[:-1]
+        #             bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
+        #             index = value.index(assigned_value)
+        #             pop.insert(index, assigned_route)
+        #
+        # if value[idvi] == assigned_value:
+        #     pass
+        #
+        # # 局部搜索后的结果更好
+        # if value[idvi] > assigned_value:
+        #     # count计数+1
+        #     count += 1
+        #     # 判断种群中是否有一样的
+        #     if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
+        #         pass
+        #     else:  # 添加
+        #         value = value[:-1]  # 使用切片删除数组的最后一个元素
+        #         pop = pop[:-1]
+        #         bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
+        #         index = value.index(assigned_value)
+        #         pop.insert(index, assigned_route)
+        return [fin_route]
 
     def n_idgreedy(self, pop, value):
         dismatrix = self.dismatrix
@@ -854,7 +821,7 @@ class MyProblem:
                 break
         return [pop, value, count]
 
-    def n_swap1(self, pop, value, idvi):
+    def n_swap1(self, pop, idvi):
         dismatrix = self.dismatrix
         solution_current = []
         count = 0
@@ -892,44 +859,44 @@ class MyProblem:
         fin_route = temp_route[min_index]
 
         # 根据swap结果来重新分配
-        [[assigned_route], assigned_value, complete_solution] = self.idv.assign_drone(fin_route, self.dismatrix,
-                                                                                      self.alpha, self.kappa)
-
-        final_solution = []
-        # 对比结果是否变好，如果结果更优，则保留
-        if value[idvi] < assigned_value:  # 原来的结果更好，则需要对比是不是比最后一个结果好
-            # solution_current.append(p)
-            # value_current.append(value[idx])
-
-            # 与最后一个对比
-            if value[-1] < assigned_value:
-                pass
-            else:
-                if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
-                    pass
-                else:  # 添加
-                    value = value[:-1]  # 使用切片删除数组的最后一个元素
-                    pop = pop[:-1]
-                    bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
-                    index = value.index(assigned_value)
-                    pop.insert(index, assigned_route)
-
-        if value[idvi] == assigned_value:
-            pass
-
-        # 局部搜索后的结果更好
-        if value[idvi] > assigned_value:
-            count += 1
-            # 判断种群中是否有一样的
-            if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
-                pass
-            else:  # 添加
-                value = value[:-1]  # 使用切片删除数组的最后一个元素
-                pop = pop[:-1]
-                bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
-                index = value.index(assigned_value)
-                pop.insert(index, assigned_route)
-        return [pop, value, count]
+        # [[assigned_route], assigned_value, complete_solution] = self.idv.assign_drone(fin_route, self.dismatrix,
+        #                                                                               self.alpha, self.kappa)
+        #
+        # final_solution = []
+        # # 对比结果是否变好，如果结果更优，则保留
+        # if value[idvi] < assigned_value:  # 原来的结果更好，则需要对比是不是比最后一个结果好
+        #     # solution_current.append(p)
+        #     # value_current.append(value[idx])
+        #
+        #     # 与最后一个对比
+        #     if value[-1] < assigned_value:
+        #         pass
+        #     else:
+        #         if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
+        #             pass
+        #         else:  # 添加
+        #             value = value[:-1]  # 使用切片删除数组的最后一个元素
+        #             pop = pop[:-1]
+        #             bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
+        #             index = value.index(assigned_value)
+        #             pop.insert(index, assigned_route)
+        #
+        # if value[idvi] == assigned_value:
+        #     pass
+        #
+        # # 局部搜索后的结果更好
+        # if value[idvi] > assigned_value:
+        #     count += 1
+        #     # 判断种群中是否有一样的
+        #     if self.is_value_in_list(assigned_value, value):  # 存在相同的适应度值
+        #         pass
+        #     else:  # 添加
+        #         value = value[:-1]  # 使用切片删除数组的最后一个元素
+        #         pop = pop[:-1]
+        #         bisect.insort(value, assigned_value)  # 将元素插入到从小到大排列的数组中
+        #         index = value.index(assigned_value)
+        #         pop.insert(index, assigned_route)
+        return [fin_route]
 
     def n_drone_launch_swap(self,pop, value):
         solution_current = []
